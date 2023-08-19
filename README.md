@@ -1,4 +1,6 @@
 # ruby-btwattch2
+forked by https://github.com/Gomasy/ruby-btwattch2
+
 Ruby toolkit for the RS-BTWATTCH2 Bluetooth power meter
 
 ```
@@ -33,3 +35,16 @@ TBD
 以下を systemd-timer や cron などで
 
     # ruby btwattch2.rb --addr CB:DF:6B:12:34:56 --set-rtc-now
+
+
+### 接続の時のメモ
+power on
+discoverable on
+agent on
+default-agent
+pairable on
+(ここでワットチェッカーを接続待機モードにする)
+scan on
+scan off
+pair F5~
+connect F5~
