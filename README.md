@@ -1,5 +1,5 @@
 # ruby-btwattch2
-forked by https://github.com/Gomasy/ruby-btwattch2
+forked from https://github.com/Gomasy/ruby-btwattch2
 
 Ruby toolkit for the RS-BTWATTCH2 Bluetooth power meter
 
