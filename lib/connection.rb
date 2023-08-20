@@ -1,5 +1,8 @@
 require "ble"
-
+require "net/http"
+require "uri"
+require "dotenv"
+require "json"
 module BTWATTCH2
   SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
   C_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
@@ -10,6 +13,25 @@ module BTWATTCH2
       @cli = cli
       @device = BLE::Adapter.new("hci#{@cli.index}")[@cli.addr]
       @buf = ""
+      @data = Array.new(10, 0)
+      @status = true  # 稼働状態 true:稼働中 false:停止中
+      @status_num = 0
+
+
+      # .envファイルから環境変数を読み込む
+      Dotenv.load '.env'
+      begin  
+        @url = URI.parse(ENV['SERVER_URL'])
+      rescue => exception
+        puts "Error: #{exception}"
+        exit
+      end
+
+      
+      headers = { 'Content-Type' => 'application/json' }
+      @http = Net::HTTP.new(@url.host, @url.port)
+      @request = Net::HTTP::Post.new( @url.request_uri, headers )
+      @request.body = { key: 'value' }.to_json
     end
 
     def connect!
@@ -80,7 +102,49 @@ module BTWATTCH2
 
     def measure
       subscribe_measure! do |e|
-        puts "V = #{e[:voltage]}, A = #{e[:ampere]}, W = #{e[:wattage]}"
+        #puts "V = #{e[:voltage]}, A = #{e[:ampere]}, W = #{e[:wattage]}"
+        if @data.size == 10
+          @data.shift
+        end
+        @data.push(e[:wattage])
+
+
+        # 15秒間の平均値を算出
+        avg = @data.inject(:+) / @data.size
+        
+        # 15秒間の平均値が50を超えたら稼働している判定
+        if avg >= 50 && @status == false
+          #かつ変化した状態が10秒以上維持されればON
+          @status_num += 1
+          if @status_num >= 5
+            @request.body = { wash_num:'1', status: 'on' }.to_json
+            @response = @http.request(@request)
+            puts "on"
+            if @response.code == '200'
+              @status = true
+              @status_num = 0
+            else
+              puts "Error: #{@response}"
+            end
+          end
+
+        elsif avg < 50 && @status == true
+          @status_num += 1
+          if @status_num >= 5
+            @request.body = { wash_num:'1', status: 'off' }.to_json
+            @response = @http.request(@request)
+            puts "off"
+            if @response.code == '200'
+              @status = false
+              @status_num = 0
+            else
+              puts "Error: #{@response}"
+            end
+          end
+        else
+          @status_num = 0
+        end
+
       end
     end
 
