@@ -38,6 +38,7 @@ TBD
 
 
 ### 接続の時のメモ
+```
 power on
 discoverable on
 agent on
@@ -48,3 +49,4 @@ scan on
 scan off
 pair F5~
 connect F5~
+```
