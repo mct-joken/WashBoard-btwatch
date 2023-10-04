@@ -19,18 +19,23 @@ module BTWATTCH2
 
 
       # .envファイルから環境変数を読み込む
-      Dotenv.load '.env'
-      begin  
-        @url = URI.parse(ENV['SERVER_URL'])
-      rescue => exception
-        puts "Error: #{exception}"
-        exit
-      end
+      #Dotenv.load '.env'
+      #begin  
+      #  @url = URI.parse(ENV['SERVER_URL'])
+      #rescue => exception
+      #  puts "Error: #{exception}"
+      #  exit
+      #end
 
+      file = File.read("env.json")
+      parse = JSON.parse(file)
+      @url = URI.parse(parse[@cli.addr])
       
       headers = { 'Content-Type' => 'application/json' }
       @http = Net::HTTP.new(@url.host, @url.port)
-      @request = Net::HTTP::Post.new( @url.request_uri, headers )
+      @http.use_ssl = true
+      @request = Net::HTTP::Put.new( @url.request_uri, headers )
+      @request.content_type = 'application/json'
       @request.body = { key: 'value' }.to_json
     end
 
@@ -111,33 +116,41 @@ module BTWATTCH2
 
         # 15秒間の平均値を算出
         avg = @data.inject(:+) / @data.size
+        puts avg
         
-        # 15秒間の平均値が50を超えたら稼働している判定
-        if avg >= 50 && @status == false
+        # 15秒間の平均値が15を超えたら稼働している判定
+        if avg >= 0.5 && @status == false
           #かつ変化した状態が10秒以上維持されればON
           @status_num += 1
           if @status_num >= 5
-            @request.body = { wash_num:'1', status: 'on' }.to_json
+            @request.body = '{ "status": "true" }'
+            puts "body is #{@request.body}"
             @response = @http.request(@request)
             puts "on"
             if @response.code == '200'
               @status = true
               @status_num = 0
             else
+              puts @response.code
+              puts "response is #{@response.body}"
               puts "Error: #{@response}"
             end
           end
 
-        elsif avg < 50 && @status == true
+        elsif avg < 0.5 && @status == true
           @status_num += 1
           if @status_num >= 5
-            @request.body = { wash_num:'1', status: 'off' }.to_json
+            @request.body = '{ "status": "false" }'
+
+            puts "body is #{@request.body}"
             @response = @http.request(@request)
             puts "off"
             if @response.code == '200'
               @status = false
               @status_num = 0
             else
+              puts @response.code
+              puts "response is #{@response.body}"
               puts "Error: #{@response}"
             end
           end
